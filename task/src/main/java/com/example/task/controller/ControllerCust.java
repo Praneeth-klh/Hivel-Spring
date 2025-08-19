@@ -5,10 +5,12 @@ import com.example.task.model.Customer;
 import com.example.task.Security.RateLimiterCust;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/customers")
@@ -30,7 +32,17 @@ public class ControllerCust {
             @RequestParam(defaultValue = "asc") String order,
             @RequestParam(required = false) String filterBy,
             @RequestParam(required = false) String filterValue) {
-        return cus.findCustomers(page, size, sortBy, order, filterBy, filterValue);
+
+        // Retrieve the list of customers based on filtering parameters
+        Page<Customer> customers = cus.findCustomers(page, size, sortBy, order, filterBy, filterValue);
+
+        // Filter out soft-deleted customers before sending data to the frontend
+        List<Customer> filteredCustomers = customers.getContent().stream()
+                .filter(customer -> !customer.isDeleted())  // Exclude soft-deleted customers
+                .collect(Collectors.toList());
+
+        // Return the filtered list as a Page object
+        return new PageImpl<>(filteredCustomers, customers.getPageable(), customers.getTotalElements());
     }
 
     // Find customers by first name
